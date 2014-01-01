@@ -92,7 +92,7 @@ module TrainRouteStringExtension
 
   def train_route_distance
     return "NO SUCH ROUTE" unless self.train_route_exist?
-    train_route_path.inject(0) {|a, e| a = a + TRAIN_GRAPHS_HASH[e].to_i }
+    train_route_path.inject(0) {|a, e| a + TRAIN_GRAPHS_HASH[e].to_i }
   end
 end
 

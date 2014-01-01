@@ -161,21 +161,6 @@ describe TrainRouteSubject do
     end
   end
 
-  # describe "#concatenated_station_array" do
-  #   it "应该将路由 concat 到下一级站点的集合." do
-  #     def subject.routes_hash
-  #       {
-  #         "A"=>["AB", "AD", "AE"],
-  #         "B"=>["BC"],
-  #         "C"=>["CD", "CE"],
-  #         "D"=>["DC", "DE"],
-  #         "E"=>["EB"]
-  #       }
-  #     end
-  #     subject.concatenated_station_array("CD").must_equal ["CDC", "CDE"]
-  #   end
-  # end
-
   describe "#concat_station_to_route_array" do
     it "应该将当前站点 concat 进入下一级站点的数组" do
       def subject.route_array
@@ -288,5 +273,17 @@ describe TrainRouteSubject do
     @subject.route = "CC"
     expected = ["CDC", "CEBC", "CDEBC", "CDCEBC", "CEBCDC", "CEBCEBC", "CEBCEBCEBC"]
     @subject.search_route_while_distance {|distance| distance < 30 }.must_equal expected
+  end
+
+  it "应该返回从 C 到 E, 距离小于 40, 并且, 长度不超过 5 的路由" do
+    @subject.route = "CE"
+    expected = ["CDE", "CDCE", "CDCDE", "CEBCE"]
+    @subject.search_route_while_distance {|distance| distance < 40 }.select {|e| e.chars.count <= 5 }.must_equal expected
+  end
+
+  it "应该返回从 C 到 E, 长度不超过 10, 距离大于 60 的路由" do
+    @subject.route = "CE"
+    expected = ["CDCDCDCDE", "CDCDCDCDCE", "CDCDCDCDCDE", "CDCDCDEBCDE", "CDCDEBCDCDE", "CDEBCDCDCDE"]
+    @subject.search_route_while_stop {|stop| stop <= 10 }.select {|e| e.train_route_distance > 60 }.must_equal expected
   end
 end
