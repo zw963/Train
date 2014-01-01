@@ -3,7 +3,7 @@
 
 # 求职者: 郑伟 zw963@163.com
 # 问题选择: TRAINS
-# 语言: Ruby 2.0
+# 语言: Ruby 2.0.0-p353
 
 # Problem:
 #   The local commuter railroad services a number of towns in Kiwiland.
@@ -63,220 +63,88 @@
 #         Output #9: 9
 #         Output #10: 7
 
+# 用来根据输入的 graphs 来生成哈希以及站点数量的模块.
 module TrainGraph
   attr_accessor :graphs
 
-  # {"AB"=>"5", "BC"=>"4" ...}
-  def train_graphs_hash
+  def graphs_hash
     Hash[graphs.map {|e| e.split(/(?=\d)/)}]
   end
 
-  # {"A"=>["AB", "AD", "AE"], "B"=>["BC"] ...}
-  def train_graph_routes_hash
-    train_graphs_hash.keys.group_by {|e| e[0] }
+  def routes_hash
+    graphs_hash.keys.group_by {|e| e[0] }
   end
 
-  def train_station_count
-    graphs.join.chars.to_a.uniq.join.count("A-Z")
+  def station_count
+    routes_hash.keys.count
   end
 end
 
-module TrainNoRepeatRoute
+# 混入 String 类的模块
+module TrainRouteStringExtension
+  def train_route_path
+    chars.each_cons(2).map(&:join)
+  end
+
+  def train_route_exist?
+    train_route_path.all? {|e| TRAIN_GRAPHS_HASH.has_key? e }
+  end
+
+  def train_route_distance
+    return "NO SUCH ROUTE" unless self.train_route_exist?
+    train_route_path.inject(0) {|a, e| a = a + TRAIN_GRAPHS_HASH[e].to_i }
+  end
+end
+
+# 主程序模块.
+module TrainRoute
   include TrainGraph
   attr_accessor :route
+  attr_writer :route_array
 
-  def route_path
-    route.chars.each_cons(2).map(&:join)
+  def route_array
+    Array[*(@route_array || route[0])]
   end
 
-  def route_exist?
-    route_path.all? {|e| train_graphs_hash.has_key? e }
+  def concat_station_to_route_array
+    route_array.map do |route|
+      routes_hash[route.chars.last].map {|e| route.chop + e }
+    end.flatten
   end
 
-  def route_distance
-    return "NO SUCH ROUTE" unless route_exist?
-    route_path.inject(0) {|a, e| a = a + train_graphs_hash[e].to_i }
-  end
-end
-
-module TrainRepeatRoute
-  include TrainGraph
-  attr_accessor :route
-
-  def start_station
-    @stop_station || route[0]
+  def matched_routes
+    @matched_routes ||= []
   end
 
-  def stop_station=(new_stop_station)
-    @stop_station = new_stop_station
+  def traversal
+    self.route_array = concat_station_to_route_array
+    matched_routes.concat concat_station_to_route_array.select {|e| e.chars.last == route[1] }
   end
 
-  def end_station
-    route[1]
+  def search_route
+    # 最极端的情况下, 对于 N 个站点, 也只需要遍历 N 次(例如: 所有站点在同一条线上), 可以访问到所有站点.
+    # refactor: 这里其实可以设定标记, 如果已经全部遍历, 提前退出.
+    station_count.times { traversal }
+    matched_routes
   end
 
-  # 假设 CC
-  #
-  # 1. 我希望获取从 C 开始的所有 path 的字符串.
-  # 2. 稍后, 我匹配, 看看有没有以 C 结束的, 有的话, 记录下来即可.
-
-  def next_station_string_array
-    train_graph_routes_hash[start_station]
-      .map {|e| start_station + e }
-      .map {|e| e.gsub(/([[:alpha:]])(\1)/, '\1') }
-  end
-
-  def parse
-    train_station_count.times do
-      stop_station = next_station_string_array
-    end
-  end
-
-  # # ["ACD", "ACE" ...]
-  # def route_path_string
-  #   # 串起来, 并替换 `连续的重复字符' 为一个.
-  #   initial_station = start_station[-1]
-  #   next_station_array = train_graph_routes_hash[]
-  #     .map {|e| route + e }
-  #     .map {|e| e.gsub(/([[:alpha:]])(\1)/, '\1') }
-  # end
-
-  # def prase
-  #   route = route_path_string
-  # end
-
-  # def start_station_char
-  #   Array[route[0]]
-  # end
-
-  # def next_station_char
-  #   route[-1]
-  # end
-
-  # def end_station_char
-  #   route[1]
-  # end
-  
-  # def matched_routes
-  #   # 假设一个站只允许经过一次, 所以, 一次遍历经过的站不会超过总数.
-  #   train_station_count.times do
-  #     # 遍历
-  #     start_station = start_station.map {|e| concat_path(e) }.flatten
-  #     # 插入一个数组.
-  #     collect_path(_initial_path, _matched_path)
-  #     # # 移除重复元素.
-  #     remove_collected_and_circle_path(_initial_path)
-  #   end
-  # end
-
-
-end
-
-class A
-  def routes
-    _matched_path = []
-    # 起点的名称数组, 例如: ['A']
-    _initial_path = Array[route[0]]
-
-    # 假设一个站只允许经过一次, 所以, 一次遍历经过的站不会超过总数.
-    train_station_count.times do
-      # 遍历
-      _initial_path = _initial_path.map {|e| concat_path(e) }.flatten
-      # 插入一个数组.
-      collect_path(_initial_path, _matched_path)
-      # # 移除重复元素.
-      remove_collected_and_circle_path(_initial_path)
-    end
-
-    # 对于存在回环的路径, 过路站点仍存在经过两次的可能性, 例如: AE, 移除掉ADCDE
-    _matched_path.flatten.reject {|e| e.chars.to_a[1..-2].uniq! }
-  end
-
-  # def Distance(path)
-  #   path.chars.each_cons(2).map(&:join).inject(0) {|a, e| a = a + path_distance_hash[e].to_i }
-  # end
-
-  # def Distance_all(path_array)
-  #   path_array.map {|e| Distance(e) }
-  # end
-
-  def collect_path(path_array, matched_path_array)
-    _dest_station = route[1]
-    # 将匹配目标站点的字符串加入数组
-    matched_path_array << path_array.grep(/#{_dest_station}$/)
-    path_array
-  end
-
-  def remove_collected_and_circle_path(path_array)
-    _start_station, _dest_station = route[0], route[1]
-    # 移除已经被收集的 path.
-    path_array.reject! {|e| e.match(/#{_dest_station}$/) }
-    # 移除存在回环的 path, 例如: DE,这个会移除 DCDE,
-    # 很不幸, 它必须在前一个 reject 之后被调用.
-    path_array.reject! {|e| e.match(/#{_start_station}$/) }
-    path_array
-  end
-
-  #  block 版, 需从外部传入终止条件.
-  def routes_while_distance(&block)
-    _matched_path = []
-    _initial_path = Array[route[0]]
-
-    (
-     _initial_path = _initial_path.map {|e| concat_path(e) }.flatten
-     collect_path(_initial_path, _matched_path)
-     ) until not                # 将每次 parse 的最小路径传入代码块.
-      yield Distance_all(_initial_path).sort.min
-
-    (_matched_path.flatten.map {|e| Distance(e) }.select &block).size
-  end
-
-  #
-  def routes_while_stop(stops = 0, &block)
-    _matched_path = []
-    _initial_path = Array[route[0]]
-
-    if block_given?
-      (
-       _initial_path = _initial_path.map {|e| concat_path(e) }.flatten
-       collect_path(_initial_path, _matched_path)
-       ) until not yield _initial_path.sort.min.size - 1
-
-      (_matched_path.flatten.map {|e| e.size - 1 }.select &block).size
+  def search_route_while_stop(&block)
+    # concat_station_to_route_array 第一次被执行时, 结果格式为: ["ABC", "DEF" ...], 第二次: ["ABCD", "DEFG" ...]
+    # 当你指定经过 3 个站点时, 需要 ["ABCD", "DEFG"] 这样的形式, 只需要执行 2 次, 因此 yield 的时候 +1, 使得 while 少执行一次.
+    initial_condition = yield(route_array.first.chars.count + 1)
+    if initial_condition
+      traversal while yield(route_array.first.chars.count + 1)
     else
-      (
-       _initial_path = _initial_path.map {|e| concat_path(e) }.flatten
-       collect_path(_initial_path, _matched_path)
-       ) until _initial_path.sort.min.size - 1 > stops
-
-      _matched_path.flatten.select {|e| e.size - 1 == stops }.size
+      # 当 until 条件满足时, 已经不再执行了, 因此, 不需要 +1
+      traversal until yield(route_array.first.chars.count)
+      matched_routes.select! {|e| e.chars.count == route_array.first.chars.count + 1 }
     end
+    matched_routes
   end
 
-  def routes_distance
-    Distance_all(routes)
+  def search_route_while_distance(&block)
+    traversal while yield route_array.map(&:train_route_distance).min
+    matched_routes.select! {|e| yield e.train_route_distance }
+    matched_routes
   end
-
-  public :routes_while_stop, :routes_distance, :routes_while_distance
-
 end
-
-# # The number of trips starting at C and ending at C with a maximum of 3 stops.
-# new_route.route = "CC"
-# p new_route.routes_while_stop {|e| e <= 3 }     # => 2
-
-# # # The number of trips starting at A and ending at C with exactly 4 stops
-# new_route.route = "AC"
-# p new_route.routes_while_stop(4)                # => 3
-
-# # # The length of the shortest route from A to C.
-# new_route.route = "AC"
-# p new_route.routes_distance.min                 # => 9
-
-# # # The length of the shortest route from B to B.
-# new_route.route = "BB"
-# p new_route.routes_distance.min                 # => 9
-
-# # # The number of different routes from C to C with a distance of less than 30.
-# new_route.route = "CC"
-# p new_route.routes_while_distance {|distance| distance < 30 } # => 7
