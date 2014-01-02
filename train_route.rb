@@ -63,16 +63,16 @@
 #         Output #9: 9
 #         Output #10: 7
 
-# 用来根据输入的 graphs 来生成哈希以及站点数量的模块.
+# 根据 graphs 来生成 `哈希表' 的模块.
 module TrainGraph
   attr_accessor :graphs
 
   def graphs_hash
-    Hash[graphs.map {|e| e.split(/(?=\d)/)}]
+    @graphs_hash ||= Hash[graphs.map {|e| e.split(/(?=\d)/)}]
   end
 
   def routes_hash
-    graphs_hash.keys.group_by {|e| e[0] }
+    @routes_hash ||= graphs_hash.keys.group_by {|e| e[0] }
   end
 
   def station_count
@@ -80,7 +80,7 @@ module TrainGraph
   end
 end
 
-# 混入 String 类的模块
+# 混入 String 类的模块.
 module TrainRouteStringExtension
   def train_route_path
     chars.each_cons(2).map(&:join)
@@ -94,6 +94,10 @@ module TrainRouteStringExtension
     return "NO SUCH ROUTE" unless self.train_route_exist?
     train_route_path.inject(0) {|a, e| a + TRAIN_GRAPHS_HASH[e].to_i }
   end
+
+  def train_route_stop
+    chars.count - 1
+  end
 end
 
 # 主程序模块.
@@ -103,7 +107,11 @@ module TrainRoute
   attr_writer :route_array
 
   def route_array
-    Array[*(@route_array || route[0])]
+    @route_array ||= Array[*route[0]]
+  end
+
+  def matched_routes
+    @matched_routes ||= []
   end
 
   def concat_station_to_route_array
@@ -112,39 +120,35 @@ module TrainRoute
     end.flatten
   end
 
-  def matched_routes
-    @matched_routes ||= []
-  end
-
   def traversal
     self.route_array = concat_station_to_route_array
     matched_routes.concat concat_station_to_route_array.select {|e| e.chars.last == route[1] }
   end
 
   def search_route
-    # 最极端的情况下, 对于 N 个站点, 也只需要遍历 N 次(例如: 所有站点在同一条线上), 可以访问到所有站点.
-    # refactor: 这里其实可以设定标记, 如果已经全部遍历, 提前退出.
+    # 最极端的情况下(例如: 所有站点在同一条线上), 对于 N 个站点, 也只需要遍历 N 次, 可以访问到所有站点.
+    # TODO: 这里其实可以设定标记, 如果已经全部遍历, 提前退出.
     station_count.times { traversal }
     matched_routes
   end
 
+  def route_string_length
+    route_array.first.chars.count
+  end
+
   def search_route_while_stop(&block)
-    # concat_station_to_route_array 第一次被执行时, 结果格式为: ["ABC", "DEF" ...], 第二次: ["ABCD", "DEFG" ...]
-    # 当你指定经过 3 个站点时, 需要 ["ABCD", "DEFG"] 这样的形式, 只需要执行 2 次, 因此 yield 的时候 +1, 使得 while 少执行一次.
-    initial_condition = yield(route_array.first.chars.count + 1)
-    if initial_condition
-      traversal while yield(route_array.first.chars.count + 1)
-    else
-      # 当 until 条件满足时, 已经不再执行了, 因此, 不需要 +1
-      traversal until yield(route_array.first.chars.count)
-      matched_routes.select! {|e| e.chars.count == route_array.first.chars.count + 1 }
-    end
+    # 最后一次 traversal 返回的结果集合, 如果是期望的结果, 那么应该通过 + 1 来终止遍历.
+    traversal while yield route_string_length + 1
     matched_routes
   end
 
+  def min_passed_stop_distance
+    route_array.map(&:train_route_distance).min
+  end
+
   def search_route_while_distance(&block)
-    traversal while yield route_array.map(&:train_route_distance).min
-    matched_routes.select! {|e| yield e.train_route_distance }
-    matched_routes
+    # 最后一次 traversal 返回的结果中, 最小 distance, 也大于 block 时, 遍历可以停止了.
+    traversal while yield min_passed_stop_distance
+    matched_routes.select {|e| yield e.train_route_distance }
   end
 end

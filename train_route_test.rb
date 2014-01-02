@@ -19,36 +19,59 @@ describe TrainGraphSubject do
   subject { TrainGraphSubject.new }
 
   describe "#graphs_hash" do
-    it "应该使用 train graphs 生成一个 `哈希表'." do
-      def subject.graphs
-        %w{AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7}
+    describe "当 @graphs_hash 不存在时" do
+      it "应该使用 graphs 生成一个 `哈希表'." do
+        def subject.graphs
+          %w{AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7}
+        end
+        expected = {
+          "AB" => "5", "BC" => "4", "CD" => "8",
+          "DC" => "8", "DE" => "6", "AD" => "5",
+          "CE" => "2", "EB" => "3", "AE" => "7"
+        }
+        subject.instance_variable_set(:@graphs_hash, nil)
+        subject.graphs_hash.must_equal expected
+        subject.instance_variable_get(:@graphs_hash).must_equal expected
       end
-      expected = {
-        "AB" => "5", "BC" => "4", "CD" => "8",
-        "DC" => "8", "DE" => "6", "AD" => "5",
-        "CE" => "2", "EB" => "3", "AE" => "7"
-      }
-      subject.graphs_hash.must_equal expected
+    end
+
+    describe "当 @graphs_hash 存在时" do
+      it "应该直接返回这个哈希." do
+        subject.instance_variable_set(:@graphs_hash, "CC" => "5")
+        subject.graphs_hash.must_equal "CC" => "5"
+      end
     end
   end
 
   describe "#routes_hash" do
-    it "应该使用 `graphs hash' 生成一个 `路由表'." do
-      def subject.graphs_hash
-        {
-          "AB"=>"5", "BC"=>"4", "CD"=>"8",
-          "DC"=>"8", "DE"=>"6", "AD"=>"5",
-          "CE"=>"2", "EB"=>"3", "AE"=>"7"
+    describe "当 @routes_hash 不存在时" do
+      it "应该使用 graphs_hash 生成一个 `路由表'." do
+        def subject.graphs_hash
+          {
+            "AB"=>"5", "BC"=>"4", "CD"=>"8",
+            "DC"=>"8", "DE"=>"6", "AD"=>"5",
+            "CE"=>"2", "EB"=>"3", "AE"=>"7"
+          }
+        end
+        expected = {
+          "A"=>["AB", "AD", "AE"],
+          "B"=>["BC"],
+          "C"=>["CD", "CE"],
+          "D"=>["DC", "DE"],
+          "E"=>["EB"]
         }
+        subject.instance_variable_set(:@routes_hash, nil)
+        subject.routes_hash.must_equal expected
+        subject.instance_variable_get(:@routes_hash).must_equal expected
       end
-      expected = {
-        "A"=>["AB", "AD", "AE"],
-        "B"=>["BC"],
-        "C"=>["CD", "CE"],
-        "D"=>["DC", "DE"],
-        "E"=>["EB"]
-      }
-      subject.routes_hash.must_equal expected
+    end
+
+    describe "当 @routes_hash 存在时" do
+      it "应该直接返回这个哈希" do
+        subject.instance_variable_set(:@routes_hash, "A" => ["AB", "AD", "AE"])
+        subject.routes_hash.must_equal "A" => ["AB", "AD", "AE"]
+      end
+
     end
   end
 
@@ -101,7 +124,7 @@ describe TrainRouteStringExtension do
     describe "当 route_path 不存在时" do
       it "应该返回 false." do
         def subject.train_route_path
-          ["AC"]
+          ["AC", "CD"]
         end
         subject.train_route_exist?.must_equal false
       end
@@ -109,16 +132,16 @@ describe TrainRouteStringExtension do
   end
 
   describe "#train_route_distance" do
-    describe "当 train_route_exist? 为真时" do
-      it "应该返回 `NO SUCH ROUTE' 消息." do
+    describe "当 train_route_exist? 为假时" do
+      it "应该直接返回 `NO SUCH ROUTE' 消息." do
         def subject.train_route_exist?
           false
         end
-        subject.train_route_distance.must_equal 'NO SUCH ROUTE', '.'
+        subject.train_route_distance.must_equal 'NO SUCH ROUTE'
       end
     end
 
-    describe "当 train_route_exist? 为假时" do
+    describe "当 train_route_exist? 为真时" do
       it "应该计算 train route 的距离." do
         def subject.route_exist?
           true
@@ -139,9 +162,9 @@ end
 describe TrainRouteSubject do
   subject { TrainRouteSubject.new }
 
-  describe "#route_array" do
+  describe "#route_array 用来收集所有遍历的结果" do
     describe "当 @route_array 非空时" do
-      it "应该返回 Array[*@route_array]." do
+      it "应该返回 @route_array." do
         subject.instance_variable_set(:@route_array, ["DEF", "DFE"])
         def subject.route
           "AC"
@@ -161,10 +184,22 @@ describe TrainRouteSubject do
     end
   end
 
-  describe "#concat_station_to_route_array" do
-    it "应该将当前站点 concat 进入下一级站点的数组" do
+  describe "#matched_routes 用来收集所有匹配的路由." do
+    it "当 @matched_routes 不存在时, 应该提供一个初始值 []" do
+      subject.instance_variable_set(:@matched_routes, nil)
+      subject.matched_routes.must_equal []
+    end
+
+    it "当 @matched_routes 存在时, 应该返回 @matched_routes 的值." do
+      subject.instance_variable_set(:@matched_routes, ["AA", "BB"])
+      subject.matched_routes.must_equal ["AA", "BB"]
+    end
+  end
+
+  describe "#concat_station_to_route_array 执行路由 concat 操作" do
+    it "应该将路由 concat 进入下一个站点的数组" do
       def subject.route_array
-        ["CD"]
+        ["BCD"]
       end
       def subject.routes_hash
         {
@@ -175,66 +210,114 @@ describe TrainRouteSubject do
           "E"=>["EB"]
         }
       end
-      subject.concat_station_to_route_array.must_equal ["CDC", "CDE"]
+      subject.concat_station_to_route_array.must_equal ["BCDC", "BCDE"]
     end
   end
 
-  # describe "#traversal" do
-  #   it "应该调用 self.initialize_route_array=(concat_station_to_route_array)" do
-  #     def subject.concat_station_to_route_array
-  #       ["CDC", "CDE"]
-  #     end
-  #     def subject.initial_route_array=(arg)
-  #       arg
-  #     end
-  #     subject.traversal.must_equal ["CDC", "CDE"]
+  describe "#traversal 用来执行递归的操作." do
+    it "应该调用 self.route_array=(concat_station_to_route_array)" do
+      def subject.concat_station_to_route_array
+        ["CDC", "CDE"]
+      end
+      def subject.route_array=(arg)
+        if arg == ["CDC", "CDE"]
+          print "OK!"
+        end
+      end
+      def subject.matched_routes
+        []
+      end
+      def subject.route
+        "AC"
+      end
+      -> { subject.traversal.must_equal ["CDC"] }.must_output "OK!"
+    end
+  end
 
-  #   end
-  # end
+  describe '#search_route' do
+    it '应该输出 2 次 OK!, 并且返回 matched_routes 的值.' do
+      def subject.station_count
+        2
+      end
+      def subject.traversal
+        print "OK!"
+      end
+      def subject.matched_routes
+        ["AC"]
+      end
+      -> { subject.search_route.must_equal ["AC"] }.must_output "OK!OK!"
+    end
+  end
 
-  # describe '#concat_station_to_concatenated_route_string_array' do
-  #   it '应该将下一个站点加入到 concatenated_route_string_array 中.' do
-  #     def subject.routes_hash
-  #       {
-  #         "A"=>["AB", "AD", "AE"],
-  #         "B"=>["BC"],
-  #         "C"=>["CD", "CE"],
-  #         "D"=>["DC", "DE"],
-  #         "E"=>["EB"]
-  #       }
-  #     end
-  #     def subject.concatenated_route_string_array
-  #       ["A"]
-  #     end
-  #     subject.concat_station_array.must_equal ["AAB", "AAD", "AAE"]
-  #   end
+  describe "#route_string_length" do
+    it "应该输出 route_array 数组的第一个元素的字符数." do
+      def subject.route_array
+        ["CDCD", "CDCE", "CDEB", "CEBC"]
+      end
+      subject.route_string_length.must_equal 4
+    end
+  end
 
-  # describe '#search_route' do
-  #   it 'should output 3 times 100.' do
-  #     # 这里如果使用类实例变量, 能否测试这个效果?
-  #     def subject.train_station_count
-  #       3
-  #     end
-  #     def subject.concatenated_route_array=(arg)
-  #       print "100"
-  #     end
-  #     def subject.concat_station_array
-  #       100
-  #     end
-  #     def subject.concatenated_route_array
-  #       ["AABDDEFFC"]
-  #     end
-  #     def subject.route
-  #       ["AC"]
-  #     end
-  #     skip
-  #     -> { subject.search_route }.must_output "100100100"
-  #     subject.search_route.must_equal ["ABDEFC"], '.'
-  #   end
-  # end
+  describe "#search_route_while_stop" do
+    describe "当 block 条件满足时" do
+      it "会立即执行 traversal, 直到条件为假." do
+        def subject.route_string_length
+          @route_string_length ||= 0
+        end
+
+        def subject.route_string_length=(arg)
+          @route_string_length = arg
+        end
+
+        def subject.traversal
+          print "OK!"
+          self.route_string_length += 1
+        end
+
+        def subject.matched_routes
+          ["ABC", "ABCD"]
+        end
+        -> { subject.search_route_while_stop {|stop| stop <= 3 }.must_equal ["ABC", "ABCD"] }.must_output "OK!OK!OK!"
+      end
+    end
+  end
+
+  describe "#min_passed_stop_distance" do
+    it "应该输出 route_array 中所有 route string 的最短距离." do
+      def subject.route_array
+        ["CDCD", "CDCE", "CDEB", "CEBC"]
+      end
+      subject.min_passed_stop_distance.must_equal 9
+    end
+  end
+
+  describe "#search_route_while_distance" do
+    describe "当 block 条件初始为真时" do
+      it "会立即执行 traversal, 直到条件为假." do
+        def subject.min_passed_stop_distance
+          @min_passed_stop_distance ||= 0
+        end
+
+        def subject.min_passed_stop_distance=(arg)
+          @min_passed_stop_distance = arg
+        end
+
+        def subject.traversal
+          print "OK!"
+          self.min_passed_stop_distance += 4
+        end
+
+        def subject.matched_routes
+          ["ABC", "ABCD"]
+        end
+        -> { subject.search_route_while_distance {|distance| distance < 10 }.must_equal ["ABC"] }.must_output "OK!OK!OK!"
+      end
+    end
+  end
 end
 
 # ============================== 功能测试 ==============================
+
 describe TrainRouteSubject do
   before do
     @subject = TrainRouteSubject.new
@@ -256,7 +339,7 @@ describe TrainRouteSubject do
   it "应该返回从 A 到 C, 长度等于 4 的路由" do
     @subject.route = "AC"
     expected = %w{ABCDC ADCDC ADEBC}
-    @subject.search_route_while_stop {|stop| stop == 4 }.must_equal expected
+    @subject.search_route_while_stop {|stop| stop <= 4 }.select {|route| route.train_route_stop == 4 }.must_equal expected
   end
 
   it "应该返回从 A 到 C 的最短路由" do
@@ -275,15 +358,21 @@ describe TrainRouteSubject do
     @subject.search_route_while_distance {|distance| distance < 30 }.must_equal expected
   end
 
-  it "应该返回从 C 到 E, 距离小于 40, 并且, 长度不超过 5 的路由" do
+  it "应该返回从 C 到 E, 距离小于 40, 长度不超过 5 的路由" do
     @subject.route = "CE"
     expected = ["CDE", "CDCE", "CDCDE", "CEBCE"]
     @subject.search_route_while_distance {|distance| distance < 40 }.select {|e| e.chars.count <= 5 }.must_equal expected
   end
 
-  it "应该返回从 C 到 E, 长度不超过 10, 距离大于 60 的路由" do
+  it "应该返回从 C 到 E, 距离大于 60, 长度不超过 10 的路由" do
     @subject.route = "CE"
     expected = ["CDCDCDCDE", "CDCDCDCDCE", "CDCDCDCDCDE", "CDCDCDEBCDE", "CDCDEBCDCDE", "CDEBCDCDCDE"]
     @subject.search_route_while_stop {|stop| stop <= 10 }.select {|e| e.train_route_distance > 60 }.must_equal expected
+  end
+
+  it "应该返回从 C 到 E, 距离等于 39 的路由" do
+    @subject.route = "CE"
+    expected = ["CDCDEBCE", "CDCEBCDE", "CDEBCDCE", "CEBCDCDE"]
+    @subject.search_route_while_distance {|distance| distance <= 40 }.select {|e| e.train_route_distance == 39 }.must_equal expected
   end
 end
