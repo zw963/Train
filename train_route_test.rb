@@ -11,6 +11,7 @@ require 'minitest/pride'
 require_relative "train_route"
 
 # ============================== 单元测试 ==============================
+# ------------------------------ TrainGraph 模块 ------------------------------
 class TrainGraphSubject
   include TrainGraph
 end
@@ -24,12 +25,13 @@ describe TrainGraphSubject do
         def subject.graphs
           %w{AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7}
         end
+        subject.instance_variable_set(:@graphs_hash, nil)
+
         expected = {
           "AB" => "5", "BC" => "4", "CD" => "8",
           "DC" => "8", "DE" => "6", "AD" => "5",
           "CE" => "2", "EB" => "3", "AE" => "7"
         }
-        subject.instance_variable_set(:@graphs_hash, nil)
         subject.graphs_hash.must_equal expected
         subject.instance_variable_get(:@graphs_hash).must_equal expected
       end
@@ -53,6 +55,8 @@ describe TrainGraphSubject do
             "CE"=>"2", "EB"=>"3", "AE"=>"7"
           }
         end
+        subject.instance_variable_set(:@routes_hash, nil)
+
         expected = {
           "A"=>["AB", "AD", "AE"],
           "B"=>["BC"],
@@ -60,14 +64,13 @@ describe TrainGraphSubject do
           "D"=>["DC", "DE"],
           "E"=>["EB"]
         }
-        subject.instance_variable_set(:@routes_hash, nil)
         subject.routes_hash.must_equal expected
         subject.instance_variable_get(:@routes_hash).must_equal expected
       end
     end
 
     describe "当 @routes_hash 存在时" do
-      it "应该直接返回这个哈希" do
+      it "应该直接返回这个哈希." do
         subject.instance_variable_set(:@routes_hash, "A" => ["AB", "AD", "AE"])
         subject.routes_hash.must_equal "A" => ["AB", "AD", "AE"]
       end
@@ -86,12 +89,12 @@ describe TrainGraphSubject do
           "E"=>["EB"]
         }
       end
-      expected = 5
-      subject.station_count.must_equal expected
+      subject.station_count.must_equal 5
     end
   end
 end
 
+# ------------------------------ TrainRoute 字符串扩展 ------------------------------
 class String
   include TrainRouteStringExtension
 end
@@ -155,50 +158,47 @@ describe TrainRouteStringExtension do
   end
 end
 
-class TrainRouteSubject
-  include TrainRoute
-end
+# ------------------------------ 主程序模块 ------------------------------
+describe TrainRoute do
+  subject { TrainRoute.new }
 
-describe TrainRouteSubject do
-  subject { TrainRouteSubject.new }
-
-  describe "#route_array 用来收集所有遍历的结果" do
-    describe "当 @route_array 非空时" do
-      it "应该返回 @route_array." do
-        subject.instance_variable_set(:@route_array, ["DEF", "DFE"])
+  describe "#routes_array 用来收集所有遍历的结果" do
+    describe "当 @routes_array 非空时" do
+      it "应该返回 @routes_array." do
+        subject.instance_variable_set(:@routes_array, ["DEF", "DFE"])
         def subject.route
           "AC"
         end
-        subject.route_array.must_equal ["DEF", "DFE"], '.'
+        subject.routes_array.must_equal ["DEF", "DFE"]
       end
     end
 
-    describe "当 @route_array 为空时" do
+    describe "当 @routes_array 为空时" do
       it "应该返回 Array[*route[0]]" do
-        subject.instance_variable_set(:@route_array, nil)
+        subject.instance_variable_set(:@routes_array, nil)
         def subject.route
           "AC"
         end
-        subject.route_array.must_equal ["A"]
+        subject.routes_array.must_equal ["A"]
       end
     end
   end
 
-  describe "#matched_routes 用来收集所有匹配的路由." do
-    it "当 @matched_routes 不存在时, 应该提供一个初始值 []" do
-      subject.instance_variable_set(:@matched_routes, nil)
-      subject.matched_routes.must_equal []
+  describe "#matched_routes_array 用来收集所有匹配的路由." do
+    it "当 @matched_routes_array 不存在时, 应该提供一个初始值 []" do
+      subject.instance_variable_set(:@matched_routes_array, nil)
+      subject.matched_routes_array.must_equal []
     end
 
-    it "当 @matched_routes 存在时, 应该返回 @matched_routes 的值." do
-      subject.instance_variable_set(:@matched_routes, ["AA", "BB"])
-      subject.matched_routes.must_equal ["AA", "BB"]
+    it "当 @matched_routes_array 存在时, 应该返回 @matched_routes_array 的值." do
+      subject.instance_variable_set(:@matched_routes_array, ["AA", "BB"])
+      subject.matched_routes_array.must_equal ["AA", "BB"]
     end
   end
 
-  describe "#concat_station_to_route_array 执行路由 concat 操作" do
+  describe "#concat_station_to_routes_array 执行路由字符串 concat 操作" do
     it "应该将路由 concat 进入下一个站点的数组" do
-      def subject.route_array
+      def subject.routes_array
         ["BCD"]
       end
       def subject.routes_hash
@@ -210,21 +210,21 @@ describe TrainRouteSubject do
           "E"=>["EB"]
         }
       end
-      subject.concat_station_to_route_array.must_equal ["BCDC", "BCDE"]
+      subject.concat_station_to_routes_array.must_equal ["BCDC", "BCDE"]
     end
   end
 
-  describe "#traversal 用来执行递归的操作." do
-    it "应该调用 self.route_array=(concat_station_to_route_array)" do
-      def subject.concat_station_to_route_array
+  describe "#traversal 执行遍历" do
+    it "应该调用 self.routes_array=(concat_station_to_routes_array)" do
+      def subject.concat_station_to_routes_array
         ["CDC", "CDE"]
       end
-      def subject.route_array=(arg)
+      def subject.routes_array=(arg)
         if arg == ["CDC", "CDE"]
           print "OK!"
         end
       end
-      def subject.matched_routes
+      def subject.matched_routes_array
         []
       end
       def subject.route
@@ -235,46 +235,46 @@ describe TrainRouteSubject do
   end
 
   describe '#search_route' do
-    it '应该输出 2 次 OK!, 并且返回 matched_routes 的值.' do
+    it '应该输出 2 次 OK!, 并且返回 matched_routes_array 的值.' do
       def subject.station_count
         2
       end
       def subject.traversal
         print "OK!"
       end
-      def subject.matched_routes
+      def subject.matched_routes_array
         ["AC"]
       end
       -> { subject.search_route.must_equal ["AC"] }.must_output "OK!OK!"
     end
   end
 
-  describe "#route_string_length" do
-    it "应该输出 route_array 数组的第一个元素的字符数." do
-      def subject.route_array
+  describe "#route_length" do
+    it "应该输出 routes_array 数组的元素的字符数." do
+      def subject.routes_array
         ["CDCD", "CDCE", "CDEB", "CEBC"]
       end
-      subject.route_string_length.must_equal 4
+      subject.route_length.must_equal 4
     end
   end
 
   describe "#search_route_while_stop" do
     describe "当 block 条件满足时" do
       it "会立即执行 traversal, 直到条件为假." do
-        def subject.route_string_length
-          @route_string_length ||= 0
+        def subject.route_length
+          @route_length ||= 0
         end
 
-        def subject.route_string_length=(arg)
-          @route_string_length = arg
+        def subject.route_length=(arg)
+          @route_length = arg
         end
 
         def subject.traversal
           print "OK!"
-          self.route_string_length += 1
+          self.route_length += 1
         end
 
-        def subject.matched_routes
+        def subject.matched_routes_array
           ["ABC", "ABCD"]
         end
         -> { subject.search_route_while_stop {|stop| stop <= 3 }.must_equal ["ABC", "ABCD"] }.must_output "OK!OK!OK!"
@@ -282,32 +282,32 @@ describe TrainRouteSubject do
     end
   end
 
-  describe "#min_passed_stop_distance" do
-    it "应该输出 route_array 中所有 route string 的最短距离." do
-      def subject.route_array
+  describe "#route_minimum_distance" do
+    it "应该输出 routes_array 中所有 route string 的最短距离." do
+      def subject.routes_array
         ["CDCD", "CDCE", "CDEB", "CEBC"]
       end
-      subject.min_passed_stop_distance.must_equal 9
+      subject.route_minimum_distance.must_equal 9
     end
   end
 
   describe "#search_route_while_distance" do
     describe "当 block 条件初始为真时" do
       it "会立即执行 traversal, 直到条件为假." do
-        def subject.min_passed_stop_distance
-          @min_passed_stop_distance ||= 0
+        def subject.route_minimum_distance
+          @route_minimum_distance ||= 0
         end
 
-        def subject.min_passed_stop_distance=(arg)
-          @min_passed_stop_distance = arg
+        def subject.route_minimum_distance=(arg)
+          @route_minimum_distance = arg
         end
 
         def subject.traversal
           print "OK!"
-          self.min_passed_stop_distance += 4
+          self.route_minimum_distance += 4
         end
 
-        def subject.matched_routes
+        def subject.matched_routes_array
           ["ABC", "ABCD"]
         end
         -> { subject.search_route_while_distance {|distance| distance < 10 }.must_equal ["ABC"] }.must_output "OK!OK!OK!"
@@ -318,9 +318,9 @@ end
 
 # ============================== 功能测试 ==============================
 
-describe TrainRouteSubject do
+describe TrainRoute do
   before do
-    @subject = TrainRouteSubject.new
+    @subject = TrainRoute.new
     @subject.graphs = %w(AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7)
   end
 

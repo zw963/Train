@@ -101,54 +101,53 @@ module TrainRouteStringExtension
 end
 
 # 主程序模块.
-module TrainRoute
+class TrainRoute
   include TrainGraph
   attr_accessor :route
-  attr_writer :route_array
+  attr_writer :routes_array
 
-  def route_array
-    @route_array ||= Array[*route[0]]
+  def routes_array
+    @routes_array ||= Array[*route[0]]
   end
 
-  def matched_routes
-    @matched_routes ||= []
+  def matched_routes_array
+    @matched_routes_array ||= []
   end
 
-  def concat_station_to_route_array
-    route_array.map do |route|
+  def concat_station_to_routes_array
+    routes_array.map do |route|
       routes_hash[route.chars.last].map {|e| route.chop + e }
     end.flatten
   end
 
   def traversal
-    self.route_array = concat_station_to_route_array
-    matched_routes.concat concat_station_to_route_array.select {|e| e.chars.last == route[1] }
+    self.routes_array = concat_station_to_routes_array
+    matched_routes_array.concat concat_station_to_routes_array.select {|e| e.chars.last == route[1] }
   end
 
   def search_route
     # 最极端的情况下(例如: 所有站点在同一条线上), 对于 N 个站点, 也只需要遍历 N 次, 可以访问到所有站点.
-    # TODO: 这里其实可以设定标记, 如果已经全部遍历, 提前退出.
     station_count.times { traversal }
-    matched_routes
+    matched_routes_array
   end
 
-  def route_string_length
-    route_array.first.chars.count
+  def route_length
+    routes_array.first.chars.count
   end
 
   def search_route_while_stop(&block)
     # 最后一次 traversal 返回的结果集合, 如果是期望的结果, 那么应该通过 + 1 来终止遍历.
-    traversal while yield route_string_length + 1
-    matched_routes
+    traversal while yield route_length + 1
+    matched_routes_array
   end
 
-  def min_passed_stop_distance
-    route_array.map(&:train_route_distance).min
+  def route_minimum_distance
+    routes_array.map(&:train_route_distance).min
   end
 
   def search_route_while_distance(&block)
     # 最后一次 traversal 返回的结果中, 最小 distance, 也大于 block 时, 遍历可以停止了.
-    traversal while yield min_passed_stop_distance
-    matched_routes.select {|e| yield e.train_route_distance }
+    traversal while yield route_minimum_distance
+    matched_routes_array.select {|e| yield e.train_route_distance }
   end
 end
