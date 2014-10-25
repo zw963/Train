@@ -1,4 +1,4 @@
-## Thoughtworks interview questions
+# Thoughtworks interview questions [![Build Status](https://travis-ci.org/zw963/Train.svg?branch=master)](https://travis-ci.org/zw963/Train)
 
 ## Problem:
   The local commuter railroad services a number of towns in Kiwiland.
