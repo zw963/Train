@@ -58,11 +58,11 @@ describe TrainGraphSubject do
         subject.instance_variable_set(:@routes_hash, nil)
 
         expected = {
-          "A"=>["AB", "AD", "AE"],
-          "B"=>["BC"],
-          "C"=>["CD", "CE"],
-          "D"=>["DC", "DE"],
-          "E"=>["EB"]
+          "A"=>["B", "D", "E"],
+          "B"=>["C"],
+          "C"=>["D", "E"],
+          "D"=>["C", "E"],
+          "E"=>["B"]
         }
         subject.routes_hash.must_equal expected
         subject.instance_variable_get(:@routes_hash).must_equal expected
@@ -203,11 +203,11 @@ describe TrainRoute do
       end
       def subject.routes_hash
         {
-          "A"=>["AB", "AD", "AE"],
-          "B"=>["BC"],
-          "C"=>["CD", "CE"],
-          "D"=>["DC", "DE"],
-          "E"=>["EB"]
+          "A"=>["B", "D", "E"],
+          "B"=>["C"],
+          "C"=>["D", "E"],
+          "D"=>["C", "E"],
+          "E"=>["B"]
         }
       end
       subject.concat_station_to_routes_array.must_equal ["BCDC", "BCDE"]

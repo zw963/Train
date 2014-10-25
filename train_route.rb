@@ -72,7 +72,7 @@ module TrainGraph
   end
 
   def routes_hash
-    @routes_hash ||= graphs_hash.keys.group_by {|e| e[0] }
+    @routes_hash ||= Hash[graphs_hash.keys.group_by {|e| e[0] }.map {|k, v| [k, v.map {|e| e[1] }] }]
   end
 
   def station_count
@@ -116,7 +116,7 @@ class TrainRoute
 
   def concat_station_to_routes_array
     routes_array.map do |route|
-      routes_hash[route.chars.last].map {|e| route.chop + e }
+      routes_hash[route.chars.last].map {|e| route + e }
     end.flatten
   end
 
