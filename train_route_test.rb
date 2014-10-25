@@ -74,7 +74,6 @@ describe TrainGraphSubject do
         subject.instance_variable_set(:@routes_hash, "A" => ["AB", "AD", "AE"])
         subject.routes_hash.must_equal "A" => ["AB", "AD", "AE"]
       end
-
     end
   end
 
@@ -82,11 +81,11 @@ describe TrainGraphSubject do
     it "应该根据 `路由表' 计算 `站点数量'." do
       def subject.routes_hash
         {
-          "A"=>["AB", "AD", "AE"],
-          "B"=>["BC"],
-          "C"=>["CD", "CE"],
-          "D"=>["DC", "DE"],
-          "E"=>["EB"]
+          "A"=>["B", "D", "E"],
+          "B"=>["C"],
+          "C"=>["D", "E"],
+          "D"=>["C", "E"],
+          "E"=>["B"]
         }
       end
       subject.station_count.must_equal 5
@@ -223,6 +222,7 @@ describe TrainRoute do
         if arg == ["CDC", "CDE"]
           print "OK!"
         end
+        @routes_array = arg
       end
       def subject.matched_routes_array
         []
@@ -277,7 +277,7 @@ describe TrainRoute do
         def subject.matched_routes_array
           ["ABC", "ABCD"]
         end
-        -> { subject.search_route_while_stop {|stop| stop <= 3 }.must_equal ["ABC", "ABCD"] }.must_output "OK!OK!OK!"
+        -> { subject.search_route_while_stop {|stop| stop <= 3 }.must_equal ["ABC", "ABCD"] }.must_output "OK!OK!OK!OK!"
       end
     end
   end
@@ -360,7 +360,7 @@ describe TrainRoute do
 
   it "应该返回从 C 到 E, 距离小于 40, 长度不超过 5 的路由" do
     subject.route = "CE"
-    expected = ["CDE", "CDCE", "CDCDE", "CEBCE"]
+    expected = ["CE", "CDE", "CDCE", "CDCDE", "CEBCE"]
     subject.search_route_while_distance {|distance| distance < 40 }.select {|e| e.chars.count <= 5 }.must_equal expected
   end
 

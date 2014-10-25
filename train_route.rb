@@ -122,7 +122,7 @@ class TrainRoute
 
   def traversal
     self.routes_array = concat_station_to_routes_array
-    matched_routes_array.concat concat_station_to_routes_array.select {|e| e.chars.last == route[1] }
+    matched_routes_array.concat routes_array.select {|e| e.chars.last == route[1] }
   end
 
   def search_route
@@ -136,8 +136,7 @@ class TrainRoute
   end
 
   def search_route_while_stop(&block)
-    # 最后一次 traversal 返回的结果集合, 如果是期望的结果, 那么应该通过 + 1 来终止遍历.
-    traversal while yield route_length + 1
+    traversal while yield route_length
     matched_routes_array
   end
 
