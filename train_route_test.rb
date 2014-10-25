@@ -319,9 +319,9 @@ end
 # ============================== 功能测试 ==============================
 
 describe TrainRoute do
+  subject { TrainRoute.new }
   before do
-    @subject = TrainRoute.new
-    @subject.graphs = %w(AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7)
+    subject.graphs = %w(AB5 BC4 CD8 DC8 DE6 AD5 CE2 EB3 AE7)
   end
 
   specify { "ABC".train_route_distance.must_equal 9 }
@@ -331,48 +331,48 @@ describe TrainRoute do
   specify { "AED".train_route_distance.must_equal 'NO SUCH ROUTE' }
 
   it "应该返回从 C 到 C, 长度不超过 3 的路由" do
-    @subject.route = "CC"
+    subject.route = "CC"
     expected = %w{CDC CEBC}
-    @subject.search_route_while_stop {|stop| stop <= 3 }.must_equal expected
+    subject.search_route_while_stop {|stop| stop <= 3 }.must_equal expected
   end
 
   it "应该返回从 A 到 C, 长度等于 4 的路由" do
-    @subject.route = "AC"
+    subject.route = "AC"
     expected = %w{ABCDC ADCDC ADEBC}
-    @subject.search_route_while_stop {|stop| stop <= 4 }.select {|route| route.train_route_stop == 4 }.must_equal expected
+    subject.search_route_while_stop {|stop| stop <= 4 }.select {|route| route.train_route_stop == 4 }.must_equal expected
   end
 
   it "应该返回从 A 到 C 的最短路由" do
-    @subject.route = "AC"
-    @subject.search_route.map(&:train_route_distance).min.must_equal 9
+    subject.route = "AC"
+    subject.search_route.map(&:train_route_distance).min.must_equal 9
   end
 
   it "应该返回从 B 到 B 的最短路由" do
-    @subject.route = "BB"
-    @subject.search_route.map(&:train_route_distance).min.must_equal 9
+    subject.route = "BB"
+    subject.search_route.map(&:train_route_distance).min.must_equal 9
   end
 
   it "应该返回从 C 到 C, 距离小于 30 的所有路由" do
-    @subject.route = "CC"
+    subject.route = "CC"
     expected = ["CDC", "CEBC", "CDEBC", "CDCEBC", "CEBCDC", "CEBCEBC", "CEBCEBCEBC"]
-    @subject.search_route_while_distance {|distance| distance < 30 }.must_equal expected
+    subject.search_route_while_distance {|distance| distance < 30 }.must_equal expected
   end
 
   it "应该返回从 C 到 E, 距离小于 40, 长度不超过 5 的路由" do
-    @subject.route = "CE"
+    subject.route = "CE"
     expected = ["CDE", "CDCE", "CDCDE", "CEBCE"]
-    @subject.search_route_while_distance {|distance| distance < 40 }.select {|e| e.chars.count <= 5 }.must_equal expected
+    subject.search_route_while_distance {|distance| distance < 40 }.select {|e| e.chars.count <= 5 }.must_equal expected
   end
 
   it "应该返回从 C 到 E, 距离大于 60, 长度不超过 10 的路由" do
-    @subject.route = "CE"
+    subject.route = "CE"
     expected = ["CDCDCDCDE", "CDCDCDCDCE", "CDCDCDCDCDE", "CDCDCDEBCDE", "CDCDEBCDCDE", "CDEBCDCDCDE"]
-    @subject.search_route_while_stop {|stop| stop <= 10 }.select {|e| e.train_route_distance > 60 }.must_equal expected
+    subject.search_route_while_stop {|stop| stop <= 10 }.select {|e| e.train_route_distance > 60 }.must_equal expected
   end
 
   it "应该返回从 C 到 E, 距离等于 39 的路由" do
-    @subject.route = "CE"
+    subject.route = "CE"
     expected = ["CDCDEBCE", "CDCEBCDE", "CDEBCDCE", "CEBCDCDE"]
-    @subject.search_route_while_distance {|distance| distance <= 40 }.select {|e| e.train_route_distance == 39 }.must_equal expected
+    subject.search_route_while_distance {|distance| distance <= 40 }.select {|e| e.train_route_distance == 39 }.must_equal expected
   end
 end
